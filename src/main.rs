@@ -327,7 +327,7 @@ fn update_score_sheet(sheet: &mut ScoreSheet, score_t: ScoreType, numbers: &Vec<
             } else {
                 0
             };
-            sheet.full_house = Some(25);
+            sheet.full_house = Some(res);
         }
         ScoreType::SmallStraight => {
             let res = if detect_small_straight(numbers) {
@@ -335,20 +335,20 @@ fn update_score_sheet(sheet: &mut ScoreSheet, score_t: ScoreType, numbers: &Vec<
             } else {
                 0
             };
-            sheet.small_straight = Some(30);
+            sheet.small_straight = Some(res);
         }
         ScoreType::LargeStraight => {
-            let ret = if detect_large_straight(numbers) {
+            let res = if detect_large_straight(numbers) {
                 40
             } else {
                 0
             };
-            sheet.large_straight = Some(ret);
+            sheet.large_straight = Some(res);
         }
         ScoreType::Yahtzee => {
             let unique_counts = count_unique_elements(numbers);
             let res = if unique_counts.len() == 1 { 50 } else { 0 };
-            sheet.yahtzee = Some(50);
+            sheet.yahtzee = Some(res);
         }
         ScoreType::Chance => sheet.chance = Some(numbers.iter().sum()),
     }
