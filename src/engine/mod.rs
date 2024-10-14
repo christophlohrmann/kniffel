@@ -23,7 +23,7 @@ enum ScoreType {
 }
 
 #[derive(Default, Debug)]
-pub struct ScoreSheet {
+struct ScoreSheet {
     ones: Option<i32>,
     twos: Option<i32>,
     threes: Option<i32>,
@@ -40,12 +40,12 @@ pub struct ScoreSheet {
 }
 
 impl ScoreSheet {
-    pub fn new() -> ScoreSheet {
+    fn new() -> ScoreSheet {
         ScoreSheet {
             ..Default::default()
         }
     }
-    pub fn sum(&self) -> i32 {
+    fn sum(&self) -> i32 {
         let upper_sum = self.ones.unwrap_or_default()
             + self.twos.unwrap_or_default()
             + self.threes.unwrap_or_default()
@@ -89,9 +89,8 @@ impl ScoreSheet {
     }
 }
 
-pub fn print_all_score_sheets(player_sheets: &HashMap<String, ScoreSheet>) {
-    // TODO: Sort out how this function can be called with immutable refs
-    // Define the category names as a vector for easier management
+fn print_all_score_sheets(player_sheets: &mut HashMap<String, ScoreSheet>) {
+    // TODO: Sort out how this function can be called with immutable refs in the main game loop.
     let score_type_names = vec![
         "Ones",
         "Twos",
@@ -128,13 +127,11 @@ pub fn print_all_score_sheets(player_sheets: &HashMap<String, ScoreSheet>) {
     for player_name in player_sheets.keys() {
         print!("{:<15}", player_name);
     }
-    println!(); // Move to the next line after the header
+    println!();
 
     // Print each category with the corresponding score for each player
     for (i, category) in score_type_names.iter().enumerate() {
-        print!("{:<25}", category); // Category in the first column
-
-        // Print the score for each player, or a blank space if the score is None
+        print!("{:<25}", category);
         for sheet in player_sheets.values() {
             print!(
                 "{:<15}",
@@ -144,16 +141,16 @@ pub fn print_all_score_sheets(player_sheets: &HashMap<String, ScoreSheet>) {
             );
         }
 
-        println!(); // Move to the next line after each category
+        println!();
     }
 }
 
-pub struct Dice {
+struct Dice {
     rng: ThreadRng,
 }
 
 impl Dice {
-    pub fn new() -> Dice {
+    fn new() -> Dice {
         Dice {
             rng: rand::thread_rng(),
         }
@@ -186,11 +183,9 @@ fn decide_keep_dice(numbers: &Vec<i32>) -> Vec<i32> {
     return keep_numbers;
 }
 
-fn decide_scoresheet_update(numbers: &Vec<i32>, sheet: &ScoreSheet) -> Result<ScoreType, String> {
+fn decide_scoresheet_update(numbers: &Vec<i32>) -> Result<ScoreType, String> {
     println!("your numbers are {numbers:?}");
-    println!("your sheet so far is {sheet:?}");
-    println!("pick score type to write to. For upper half type 1-6. For lower half type one of fh, tk, fk, ss, ls, y, c.
-    If your numbers do not fulfil the shape criterion, the score type will be scratched");
+    println!("pick score type to write to. For upper half type 1-6. For lower half type one of fh, tk, fk, ss, ls, y, c. If your numbers do not fulfil the shape criterion, the score type will be scratched");
     let mut input = String::new();
 
     io::stdin()
@@ -349,7 +344,8 @@ fn update_score_sheet(sheet: &mut ScoreSheet, score_t: ScoreType, numbers: &Vec<
     }
 }
 
-pub fn play_turn(dice: &mut Dice, sheet: &mut ScoreSheet) {
+fn play_turn(dice: &mut Dice, sheet: &mut ScoreSheet) {
+    // Handle one turn (up to three dice throws) for one player.
     let mut kept_numbers: Vec<i32> = Vec::with_capacity(5);
 
     // round 1 and 2: throw and pick
@@ -392,7 +388,7 @@ pub fn play_turn(dice: &mut Dice, sheet: &mut ScoreSheet) {
 
     let mut chosen_score_t: ScoreType;
     loop {
-        let choice_res = decide_scoresheet_update(&numbers, sheet);
+        let choice_res = decide_scoresheet_update(&numbers);
         match choice_res {
             Ok(x) => chosen_score_t = x,
             Err(e) => {
@@ -410,8 +406,50 @@ pub fn play_turn(dice: &mut Dice, sheet: &mut ScoreSheet) {
     }
 
     update_score_sheet(sheet, chosen_score_t, &numbers);
+}
 
-    println!("sheet is {:?}", sheet);
+fn get_player_names() -> Vec<String> {
+    // get player names from user input. Chooses default name if input is empty.
+    println!("Enter player names separated by whitespace");
+
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+    let mut player_names: Vec<String> = input.trim().split_whitespace().map(String::from).collect();
+    if player_names.is_empty() {
+        player_names = vec![String::from("default_name")];
+    }
+    return player_names;
+}
+
+pub fn play_game() {
+    {
+        let mut dice = Dice::new();
+
+        let players = get_player_names();
+
+        let mut score_sheets: HashMap<String, ScoreSheet> = HashMap::new();
+        for player in players {
+            score_sheets.insert(String::from(player), ScoreSheet::new());
+        }
+
+        for turn in 1..14 {
+            println!("Start of turn {turn}. Scores so far are");
+            print_all_score_sheets(&mut score_sheets);
+            println!();
+            for (player, sheet_ref) in &mut score_sheets {
+                println!("turn {turn} for player {player}.");
+                play_turn(&mut dice, sheet_ref);
+                println!();
+            }
+        }
+        println!("final result:");
+        for (player, sheet) in score_sheets {
+            let sum = sheet.sum();
+            println!("{player}: {sum}")
+        }
+    }
 }
 
 #[cfg(test)]
